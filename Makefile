@@ -73,24 +73,44 @@ INCLUDES		+=	-Iinclude				\
 				-Iinclude/lib/el3_runtime/${ARCH}	\
 				${PLAT_INCLUDES}			\
 				${SPD_INCLUDES}
+################################################################################
+# Build function
+################################################################################
+# MAKE_C_LIB builds a C source file and generates the dependency file
+#   $(1) = output directory
+#   $(2) = source file (%.c)
+#   $(3) = library name
+define MAKE_C_LIB
+$(eval OBJ := $(1)/$(patsubst %.c,%.o,$(notdir $(2))))
+$(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
+
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | lib$(3)_dirs
+	$$(ECHO) "  CC      $$<"
+	$$(Q)$$(CC) $$(TF_CFLAGS) $$(CFLAGS) $(MAKE_DEP) -c $$< -o $$@
+
+-include $(DEP)
+
+endef
+
+# MAKE_S_LIB builds an assembly source file and generates the dependency file
+#   $(1) = output directory
+#   $(2) = source file (%.S)
+#   $(3) = library name
+define MAKE_S_LIB
+$(eval OBJ := $(1)/$(patsubst %.S,%.o,$(notdir $(2))))
+$(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
+
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | lib$(3)_dirs
+	$$(ECHO) "  AS      $$<"
+	$$(Q)$$(AS) $$(ASFLAGS) $(MAKE_DEP) -c $$< -o $$@
+
+-include $(DEP)
+
+endef
 
 
 ################################################################################
 # Build targets
 ################################################################################
-
-.PHONY:	all msg_start clean
-
-all: clean msg_start targets_bin
-
-msg_start:
-	@echo "  Building ${VERSION_STRING}"
-
-clean:
-	@echo "  CLEAN"
-
-targets_elf:
-	@echo "  ELF"
-
-targets_bin: targets_elf
-	@echo "  BIN"
+include source.mk
+include build.mk
