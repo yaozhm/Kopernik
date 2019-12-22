@@ -84,7 +84,7 @@ define MAKE_C_LIB
 $(eval OBJ := $(1)/$(patsubst %.c,%.o,$(notdir $(2))))
 $(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
 
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | lib$(3)_dirs
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  CC      $$<"
 	$$(Q)$$(CC) $$(TF_CFLAGS) $$(CFLAGS) $(MAKE_DEP) -c $$< -o $$@
 
@@ -100,7 +100,7 @@ define MAKE_S_LIB
 $(eval OBJ := $(1)/$(patsubst %.S,%.o,$(notdir $(2))))
 $(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
 
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | lib$(3)_dirs
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  AS      $$<"
 	$$(Q)$$(AS) $$(ASFLAGS) $(MAKE_DEP) -c $$< -o $$@
 
@@ -112,5 +112,10 @@ endef
 ################################################################################
 # Build targets
 ################################################################################
-include source.mk
-include build.mk
+include build/source.mk
+include build/build.mk
+
+BUILD_DIR			:=	./obj
+
+all:
+$(eval $(call MAKE_TARGET))

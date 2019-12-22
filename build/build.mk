@@ -62,7 +62,7 @@ $(if $(__numeric),$(error $(1) must be numeric))
 endef
 
 define IMG_LINKERFILE
-    ${BUILD_DIR}/Kopernik.ld
+    Kopernik.ld
 endef
 
 define IMG_MAPFILE
@@ -100,7 +100,7 @@ define MAKE_C_LIB
 $(eval OBJ := $(1)/$(patsubst %.c,%.o,$(notdir $(2))))
 $(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
 
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | lib$(3)_dirs
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  CC      $$<"
 	$$(Q)$$(CC) $$(CFLAGS) $(MAKE_DEP) -c $$< -o $$@
 
@@ -116,7 +116,7 @@ define MAKE_S_LIB
 $(eval OBJ := $(1)/$(patsubst %.S,%.o,$(notdir $(2))))
 $(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
 
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | lib$(3)_dirs
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  AS      $$<"
 	$$(Q)$$(AS) $$(ASFLAGS) $(MAKE_DEP) -c $$< -o $$@
 
@@ -136,7 +136,7 @@ $(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
 $(eval IMAGE := IMAGE_BL$(call uppercase,$(3)))
 $(eval BL_CFLAGS := $(BL$(call uppercase,$(3))_CFLAGS))
 
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | bl$(3)_dirs
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  CC      $$<"
 	$$(Q)$$(CC) $$(CFLAGS) $(MAKE_DEP) -c $$< -o $$@
 
@@ -155,7 +155,7 @@ $(eval OBJ := $(1)/$(patsubst %.S,%.o,$(notdir $(2))))
 $(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
 $(eval IMAGE := IMAGE_BL$(call uppercase,$(3)))
 
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | bl$(3)_dirs
+$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  AS      $$<"
 	$$(Q)$$(AS) $$(ASFLAGS) -D$(IMAGE) $(MAKE_DEP) -c $$< -o $$@
 
@@ -173,30 +173,13 @@ define MAKE_LD
 $(eval DEP := $(1).d)
 $(eval IMAGE := IMAGE_BL$(call uppercase,$(3)))
 
-$(1): $(2) $(filter-out %.d,$(MAKEFILE_LIST)) | bl$(3)_dirs
+$(1): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
 	$$(ECHO) "  PP      $$<"
 	$$(Q)$$(CPP) $$(CPPFLAGS) $(TF_CFLAGS_$(ARCH)) -P -x assembler-with-cpp -D__LINKER__ $(MAKE_DEP) -D$(IMAGE) -o $$@ $$<
 
 -include $(DEP)
 
 endef
-
-# MAKE_LIB_OBJS builds both C and assembly source files
-#   $(1) = output directory
-#   $(2) = list of source files
-#   $(3) = name of the library
-define MAKE_LIB_OBJS
-        $(eval C_OBJS := $(filter %.c,$(2)))
-        $(eval REMAIN := $(filter-out %.c,$(2)))
-        $(eval $(foreach obj,$(C_OBJS),$(call MAKE_C_LIB,$(1),$(obj),$(3))))
-
-        $(eval S_OBJS := $(filter %.S,$(REMAIN)))
-        $(eval REMAIN := $(filter-out %.S,$(REMAIN)))
-        $(eval $(foreach obj,$(S_OBJS),$(call MAKE_S_LIB,$(1),$(obj),$(3))))
-
-        $(and $(REMAIN),$(error Unexpected source files present: $(REMAIN)))
-endef
-
 
 # MAKE_OBJS builds both C and assembly source files
 #   $(1) = output directory
@@ -249,12 +232,11 @@ define MAKE_TARGET
         $(eval BUILD_DIR  := ${BUILD_PLAT}/Kopernik)
         $(eval SOURCES    := $(TARGET_COMMON_SOURCES) $(PLAT_COMMON_SOURCES) $(PLAT_SOURCES))
         $(eval OBJS       := $(addprefix $(BUILD_DIR)/,$(call SOURCES_TO_OBJS,$(SOURCES))))
-        $(eval LINKERFILE := $(call IMG_LINKERFILE,$(1)))
-        $(eval MAPFILE    := $(call IMG_MAPFILE,$(1)))
-        $(eval ELF        := $(call IMG_ELF,$(1)))
-        $(eval DUMP       := $(call IMG_DUMP,$(1)))
-        $(eval BIN        := $(call IMG_BIN,$(1)))
-        $(eval BL_LINKERFILE := $(BL$(call uppercase,$(1))_LINKERFILE))
+        $(eval LINKERFILE := $(call IMG_LINKERFILE))
+        $(eval MAPFILE    := $(call IMG_MAPFILE))
+        $(eval ELF        := $(call IMG_ELF))
+        $(eval DUMP       := $(call IMG_DUMP))
+        $(eval BIN        := $(call IMG_BIN))
         # We use sort only to get a list of unique object directory names.
         # ordering is not relevant but sort removes duplicates.
         $(eval TEMP_OBJ_DIRS := $(sort $(dir ${OBJS} ${LINKERFILE})))
@@ -272,8 +254,8 @@ $(eval $(foreach objd,${OBJ_DIRS},$(call MAKE_PREREQ_DIR,${objd},${BUILD_DIR})))
 
 Kopernik_dirs: | ${OBJ_DIRS}
 
-$(eval $(call MAKE_OBJS,$(BUILD_DIR),$(SOURCES),$(1)))
-$(eval $(call MAKE_LD,$(LINKERFILE),$(BL_LINKERFILE),$(1)))
+$(eval $(call MAKE_OBJS,$(BUILD_DIR),$(SOURCES)))
+$(eval $(call MAKE_LD,$(LINKERFILE)))
 
 $(ELF): $(OBJS) $(LINKERFILE) | Kopernik_dirs
 	$$(ECHO) "  LD      $$@"
