@@ -1,0 +1,218 @@
+
+========================================================================
+Fast Models 11.9 Base Rev C FVP Release Notes
+========================================================================
+
+
+--------------------------------------------------------------------
+Enhancements and Changes in the Fast Models 11.9 Release
+--------------------------------------------------------------------
+
+The Base Rev C platform is an evolution of the Base platform, enhanced
+to support exploration of system level virtualization. It is an
+Architecture Envelope Model (AEM) which incorporates two AEM clusters,
+each of which can be configured with up to four cores.  It supports
+ARMv8 architecture versions up to v8.4, and defaults to a
+configuration that is compatible with ARMv8.2.
+
+It is freely available and does not require a license from Arm in order
+to run the model.
+
+FVPs shipped with this package are built with Visual Studio 2013 and gcc 4.9.2.
+
+
+-------------------------------------------
+Platform requirements for Microsoft Windows
+-------------------------------------------
+
+An Intel Core 2 Duo or higher processor is required.
+
+Operating systems (64 bit only):
+
+* Microsoft Windows 7
+* Microsoft Windows 10
+
+Runtime Libraries:
+
+Fast Models Portfolio does not contain the Microsoft Visual Studio
+2013 runtime libraries.  These libraries might have to be downloaded
+from Microsoft.
+
+Please email support-esl@arm.com with any comments.
+
+To view the documentation, Adobe Acrobat reader (Version 8 or higher)
+needs to be installed on the system.
+
+-------------------------------
+Platform requirements for Linux
+-------------------------------
+
+An Intel Core 2 Duo or higher processor is required.
+
+Operating systems (64 bit only):
+* RedHat 6
+* RedHat 7
+* Ubuntu 16.04
+
+To view the Fast Models documentation, a PDF reader needs to be
+installed on the system.
+
+
+------------------
+Installation Notes
+------------------
+
+By default Microsoft Windows 7 does not provide an executable telnet
+client. For instructions on how to deal with this, please see the Fast
+Models Reference Manual section 1.11.
+
+
+------------------------------------------------
+System Level Virtualization
+------------------------------------------------
+
+* Additions
+
+This package contains the following additions to the Base Platform
+specification:
+
+A PCI-E config region at 0x0040000000..0x004fffffff
+A PCI-E memory region at 0x0050000000..0x005fffffff
+A PCI-E memory region at 0x4000000000..0x7fffffffff
+An SMMUv3AEM with a control region at 0x002B500000..0x002B5FFFFF
+
+SMMU Combined Interrupt NS is wired to SPI 71
+SMMU Combined Interrupt S is wired to SPI 72
+
+PCI INTA is wired to SPI 168
+PCI INTB is wired to SPI 169
+PCI INTC is wired to SPI 170
+PCI INTC is wired to SPI 171
+PCI System Error is wired to SPI 175
+
+The SMMUv3 is placed such that accesses to memory by PCI devices acting as bus
+masters are affected by it.
+
+The PCI-E config region implements ECAM.
+
+* SMMUv3AEM
+
+This is an architectural model implementing the SMMUv3.0 and
+SMMUv3.1 architectures which are for I/O virtualization of
+devices.
+
+Limitations:
+    - No RAS
+    - The PMU has limited functionality. Only a subset of the
+      architecturally mandatory events are supported (as indicated
+      by the SMMU_PMCG_CEID0 fields).  The PMU is only intended for
+      demonstration purposes and for driver development.
+
+* Legacy PCI Interrupts
+
+Each PCI device is hardwired to use INTA. That is 1 in the
+interrupt_pin register.  This is mandated by the PCI Spec for single
+function devices.
+
+The mapping of the interrupts in the bridge follows the prescription
+from section 2.2.6 of the PCI Local Bus 3 specification. With
+
+IntA = 0, IntB = 1, IntC = 2, IntD = 3:
+
+BridgeInterrupt = (Device + DeviceInterrupt) % 4
+
+
+* MSI-X
+
+The model optionally implements MSI-X depending on if a parameter is set. If
+this parameter is set then an MSI-X capability is advertised as a PCI
+Capability.
+
+Note: The Virtio specification is not fully compliant with the PCI
+specification and the virtio block device cannot be used in a 'pure polling'
+mode where MSI-X is always masked and only polling the Pending Bit Array is
+used.
+
+
+* Composition
+
+The PCI Subsystem is composed of the following model components:
+
+pci.pvbus2pci: This is the bridge from the Programmer's View bus to
+the PCI bus.
+
+pci.pcidevice<N>: This is a wrapper around the underlying virtio block
+device. There are two block devices 0 and 1 in the system.
+
+pci.pcivirtioblockdevice<N>: These are the instances of the virtio
+block device component.
+
+Interesting options are:
+
+pci.pvbus2pci.diagnostics=0x0    # (int) default = '0x0'  : Diagnostics level : [0x0..0x4]
+pci.pcidevice<N>.diagnostics=0x0 # (int) default = '0x0'  : Diagnostics level : [0x0..0x4]
+
+If set to non-zero values, these options print messages about the
+operation of the bridge. The higher the number the more verbose the
+component will be.
+
+pci.pcidevice<N>.bus=0x0         # (int ) default = '0x0' : Bus number for this device : [0x0..0xFF]
+pci.pcidevice<N>.device=0x0      # (int ) default = '0x0' : Device number on this bus : [0x0..0x1F]
+pci.pcidevice<N>.bar0_64bit=0    # (bool) default = '0'   : If BAR 0 is 64 bits wide, if region size is non zero
+pci.pcidevice<N>.msix_support=0  # (bool) default = '0'   : Enable device support for MSI-X
+pci.pcidevice<N>.bar2_64bit=0    # (bool) default = '0'   : If BAR 2 is 64 bits wide, if region size is non zero
+pci.pcidevice<N>.bar4_64bit=0    # (bool) default = '0'   : If BAR 4 is 64 bits wide, if region size is non zero
+
+Each PCI device uses three BARs: one for config space, one for the MSI-X table
+structure and one for the MSI-X Pending Bit Array. Each of these can be
+configured to be 32 or 64 bits wide.
+
+The Bus and Device number can be configured for each PCI device. If
+the device advertises MSI-X, support may be configured.
+
+pci.pcivirtioblockdevice<N>.image_path="" # (string) default = '' : image file path
+
+This configures the image file that the virtio block device exposes.
+
+There are two PVBusLoggers in the pvbus2pci component. One in front of the
+Configuration space and one in front of the Device space:
+
+FVP_Base_AEMv8A_AEMv8A-PCI.pci.pvbus2pci.devicelogger
+FVP_Base_AEMv8A_AEMv8A-PCI.pci.pvbus2pci.cfglogger
+
+There is one PVBusLogger in the pcidevice component. This will report on DMA
+accesses by the PCI device:
+
+FVP_Base_AEMv8A_AEMv8A-PCI.pci.pcidevice0.dmalogger
+
+There is a PVBusLogger downstream of the SMMU. This will report on the transactions
+after they have been transformed by the SMMU:
+
+FVP_Base_AEMv8A_AEMv8A_PCI.pci.smmulogger
+
+For example, you can see all accesses to device space by adding the
+following options to the command line:
+
+--plugin GenericTrace.so
+-C TRACE.GenericTrace.trace-sources="FVP_Base_AEMv8A_AEMv8A-PCI.pci.pvbus2pci.devicelogger.*"
+
+* Known Limitations
+
+- In a real system use of the stall model would violate PCI timing
+  constraints and so should not be used.
+
+* Known Bugs
+
+- Arbitrary sized but naturally aligned accesses to virtio registers via PCI
+  are not implemented, the model will print a message if such an access is
+  performed.
+
+- Debug reads and writes to the virtio registers are not implemented.
+
+
+Date:  2019/11/26 15:10:42 GMT
+Build: 11.9:41
+
+==============================================================================
+END
+==============================================================================

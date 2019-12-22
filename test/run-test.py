@@ -5,7 +5,7 @@ import sys
 import subprocess
 
 FVP_BINARY = os.path.join(
-        "/home/puck/work/github/fvp/Base_RevC_AEMv8A_pkg/models",
+        "prebuilt/fvp/Base_RevC_AEMv8A_pkg/models/",
         "Linux64_GCC-6.4",
         "FVP_Base_RevC-2xAEMv8A"
 )
