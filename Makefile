@@ -1,121 +1,81 @@
-VERSION_MAJOR			:= 1
-VERSION_MINOR			:= 0
+CFLAGS = $(cflags)
 
-BUILD_STRING	:=	$(shell git describe --always --dirty --tags 2> /dev/null)
-BUILD_BRANCH	:=	$(shell git branch 2> /dev/null)
-VERSION_STRING	:=	v${VERSION_MAJOR}.${VERSION_MINOR}:${BUILD_STRING}:$(BUILD_BRANCH)
+SOURCE_ROOT = .
 
-################################################################################
-# Toolchain
-################################################################################
+CROSS_COMPILE := aarch64-none-linux-gnu-
 
-HOSTCC			:=	gcc
-export HOSTCC
+CC = $(CROSS_COMPILE)gcc
+AS = $(CROSS_COMPILE)as
+LD = $(CROSS_COMPILE)ld
+OBJCOPY = $(CROSS_COMPILE)objcopy
+OBJDUMP = $(CROSS_COMPILE)objdump
+READELF = $(CROSS_COMPILE)readelf
 
-CC			:=	${CROSS_COMPILE}gcc
-CPP			:=	${CROSS_COMPILE}cpp
-AS			:=	${CROSS_COMPILE}gcc
-AR			:=	${CROSS_COMPILE}ar
-LINKER			:=	${CROSS_COMPILE}ld
-OC			:=	${CROSS_COMPILE}objcopy
-OD			:=	${CROSS_COMPILE}objdump
-NM			:=	${CROSS_COMPILE}nm
-PP			:=	${CROSS_COMPILE}gcc -E
-DTC			:=	dtc
+BUILD = $(SOURCE_ROOT)/build
 
+include source.mk
 
-# Additional warnings
-# Level 1
-WARNING1 := -Wextra
-WARNING1 += -Wmissing-format-attribute
-WARNING1 += -Wmissing-prototypes
-WARNING1 += -Wold-style-definition
+ALL_SRCS = $(KERNEL_SRCS) $(PLATFORM_SRCS) $(LIBC_SRCS) $(DRIVER_SRCS) $(TEST_SRCS)
 
-# Level 2
-WARNING2 := -Waggregate-return
-WARNING2 += -Wcast-align
-WARNING2 += -Wnested-externs
+C_SRCS   = $(filter %.c, $(ALL_SRCS))
+ASM_SRCS = $(filter %.S, $(ALL_SRCS))
+H_SRCS   = $(wildcard $(INCLUDE_DIR)/*.h)
 
-WARNING3 := -Wbad-function-cast
-WARNING3 += -Wcast-qual
-WARNING3 += -Wconversion
-WARNING3 += -Wpacked
-WARNING3 += -Wpointer-arith
-WARNING3 += -Wredundant-decls
-WARNING3 += -Wswitch-default
+C_OBJS   = $(addprefix $(BUILD)/, $(patsubst %.c,%.o,$(C_SRCS)))
+ASM_OBJS = $(addprefix $(BUILD)/, $(patsubst %.S,%.o,$(ASM_SRCS)))
 
-ifeq (${W},1)
-WARNINGS += $(WARNING1)
-else ifeq (${W},2)
-WARNINGS += $(WARNING1) $(WARNING2)
-else ifeq (${W},3)
-WARNINGS += $(WARNING1) $(WARNING2) $(WARNING3)
-endif
+ALL_OBJS = $(C_OBJS) $(ASM_OBJS)
+#$(warning ALL_SRCS $(ALL_SRCS))
+#$(warning ALL_OBJS $(ALL_OBJS))
 
-WARNINGS	+=		-Wunused-but-set-variable -Wmaybe-uninitialized	\
-				-Wpacked-bitfield-compat -Wshift-overflow=2 \
-				-Wlogical-op
-
-CPPFLAGS		=	${DEFINES} ${INCLUDES} ${MBEDTLS_INC} -nostdinc	\
-				$(ERRORS) $(WARNINGS)
-
-ASFLAGS			+=	$(CPPFLAGS) $(ASFLAGS_$(ARCH))			\
-				-ffreestanding -Wa,--fatal-warnings
-
-CFLAGS			+=	$(CPPFLAGS) $(TF_CFLAGS_$(ARCH))		\
-				-ffunction-sections -fdata-sections		\
-				-ffreestanding -fno-builtin -fno-common		\
-				-Os -std=gnu99
-
-INCLUDES		+=	-Iinclude				\
-				-Iinclude/arch/${ARCH}			\
-				-Iinclude/lib/cpus/${ARCH}		\
-				-Iinclude/lib/el3_runtime/${ARCH}	\
-				${PLAT_INCLUDES}			\
-				${SPD_INCLUDES}
-################################################################################
-# Build function
-################################################################################
-# MAKE_C_LIB builds a C source file and generates the dependency file
-#   $(1) = output directory
-#   $(2) = source file (%.c)
-#   $(3) = library name
-define MAKE_C_LIB
-$(eval OBJ := $(1)/$(patsubst %.c,%.o,$(notdir $(2))))
-$(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
-
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
-	$$(ECHO) "  CC      $$<"
-	$$(Q)$$(CC) $$(TF_CFLAGS) $$(CFLAGS) $(MAKE_DEP) -c $$< -o $$@
-
--include $(DEP)
-
-endef
-
-# MAKE_S_LIB builds an assembly source file and generates the dependency file
-#   $(1) = output directory
-#   $(2) = source file (%.S)
-#   $(3) = library name
-define MAKE_S_LIB
-$(eval OBJ := $(1)/$(patsubst %.S,%.o,$(notdir $(2))))
-$(eval DEP := $(patsubst %.o,%.d,$(OBJ)))
-
-$(OBJ): $(2) $(filter-out %.d,$(MAKEFILE_LIST))
-	$$(ECHO) "  AS      $$<"
-	$$(Q)$$(AS) $$(ASFLAGS) $(MAKE_DEP) -c $$< -o $$@
-
--include $(DEP)
-
-endef
+#$(warning C_SRCS $(C_SRCS) ASM_SRCS $(ASM_SRCS))
+#$(warning C_OBJS $(C_OBJS) ASM_OBJS $(ASM_OBJS))
 
 
-################################################################################
-# Build targets
-################################################################################
-include build/source.mk
-include build/build.mk
+OBJ_PATHS = $(addprefix $(BUILD)/, $(sort $(dir $(ALL_SRCS))))
+#$(warning OBJ_PATHS $(OBJ_PATHS))
 
-BUILD_DIR			:=	./obj
 
-all:
-$(eval $(call MAKE_TARGET))
+TARGET = Kopernik
+TARGET_ELF = $(BUILD)/$(TARGET).elf
+TARGET_IMG = $(BUILD)/$(TARGET).bin
+TARGET_MAP = $(BUILD)/$(TARGET).map
+
+LDS = $(SOURCE_ROOT)/$(TARGET).ld
+
+CFLAGS  += -nostdlib -funwind-tables -fno-builtin -Wall -O3 -g -I$(INCLUDE_DIR)
+
+LDFLAGS = -T $(LDS) -Map $(TARGET_MAP) -nostdlib -nostartfiles --defsym=ORIGIN_ADDRESS=0x80000000
+
+.PHONY: build_all clean tags
+
+build_all: all
+
+$(C_OBJS): $(BUILD)/%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(ASM_OBJS): $(BUILD)/%.o: %.s
+	$(AS) $(ASFLAGS) $< -o $@
+
+build_objs: $(C_OBJS) $(ASM_OBJS)
+
+init:
+	mkdir -p build
+	@$(foreach d,$(OBJ_PATHS), mkdir -p $(d);)
+
+all: init build_objs
+	$(LD) $(ALL_OBJS) $(LDFLAGS) -o $(TARGET_ELF)
+	$(OBJCOPY) $(TARGET_ELF) -O binary $(TARGET_IMG)
+	cp $(TARGET_IMG) Kopernik.bin
+	cp $(TARGET_ELF) Kopernik.elf
+
+tags:
+	@echo "  create ctags"
+
+ccount:
+	@echo "  counting sizes"
+	find . | egrep ".*\.[ch]$$" | xargs wc -l
+
+
+clean:
+	-rm -rf build

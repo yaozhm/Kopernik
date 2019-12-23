@@ -78,7 +78,7 @@ prepare_for_c:
 	msr spsel, #1
 
 	/* Prepare the stack. */
-	ldr x1, [x0, #CPU_STACK_BOTTOM]
+	#ldr x1, [x0, #CPU_STACK_BOTTOM]
 	mov sp, x1
 
 	/* Configure exception handlers. */
