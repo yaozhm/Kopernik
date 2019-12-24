@@ -11,22 +11,21 @@ FVP_BINARY = os.path.join(
 )
 
 start_data = os.path.join(
-        "/home/puck/work/github/arm-trusted-firmware/build/fvp/release",
-        "bl31.bin"
+        "Kopernik.bin"
 )
 
 uart0_log_path = os.path.join(
-        "/home/puck/work/github/Kopernik/out",
+        "out",
         "uart0.log"
 )
 
 uart1_log_path = os.path.join(
-        "/home/puck/work/github/Kopernik/out",
+        "out",
         "uart1.log"
 )
 
 run_log = os.path.join(
-        "/home/puck/work/github/Kopernik/out",
+        "out",
         "run.log"
 )
 
