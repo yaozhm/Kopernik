@@ -60,22 +60,26 @@ $(ASM_OBJS): $(BUILD)/%.o: %.s
 build_objs: $(C_OBJS) $(ASM_OBJS)
 
 init:
-	mkdir -p build
+	@mkdir -p build
 	@$(foreach d,$(OBJ_PATHS), mkdir -p $(d);)
 
 all: init build_objs
+	@echo "   make ..."
 	$(LD) $(ALL_OBJS) $(LDFLAGS) -o $(TARGET_ELF)
 	$(OBJCOPY) $(TARGET_ELF) -O binary $(TARGET_IMG)
-	cp $(TARGET_IMG) Kopernik.bin
-	cp $(TARGET_ELF) Kopernik.elf
+	cp $(TARGET_IMG) $(TARGET).bin
+	cp $(TARGET_ELF) $(TARGET).elf
 
 tags:
 	@echo "  create ctags"
 
-ccount:
+count:
 	@echo "  counting sizes"
 	find . | egrep ".*\.[ch]$$" | xargs wc -l
 
 
 clean:
-	-rm -rf build
+	@echo "  clean ..."
+	@-rm -rf build
+	@-rm -rf $(TARGET).elf
+	@-rm -rf $(TARGET)*.bin
