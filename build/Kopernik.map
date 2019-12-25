@@ -6,7 +6,7 @@ Name             Origin             Length             Attributes
 
 Linker script and memory map
 
-LOAD ./build/core/core.o
+LOAD ./build/kernel/mp_stack.o
 LOAD ./build/arch/arm64/entry.o
                 0x0000000080000000                . = ORIGIN_ADDRESS
                 0x0000000080000000                text_begin = .
@@ -17,15 +17,14 @@ LOAD ./build/arch/arm64/entry.o
                 0x0000000080000000                entry
  *(.init.*)
 
-.text           0x00000000800000b8        0x4
+.text           0x00000000800000b8        0x0
  *(.text.*)
- .text          0x00000000800000b8        0x4 ./build/core/core.o
-                0x00000000800000b8                print
- .text          0x00000000800000bc        0x0 ./build/arch/arm64/entry.o
-                0x00000000000000bc                text_size = ABSOLUTE ((. - text_begin))
+ .text          0x00000000800000b8        0x0 ./build/kernel/mp_stack.o
+ .text          0x00000000800000b8        0x0 ./build/arch/arm64/entry.o
+                0x00000000000000b8                text_size = ABSOLUTE ((. - text_begin))
 
-.iplt           0x00000000800000bc        0x0
- .iplt          0x00000000800000bc        0x0 ./build/arch/arm64/entry.o
+.iplt           0x00000000800000b8        0x0
+ .iplt          0x00000000800000b8        0x0 ./build/kernel/mp_stack.o
                 0x0000000080001000                . = ALIGN (0x1000)
                 0x0000000080001000                text_end = .
                 0x0000000080001000                . = ALIGN (0x1000)
@@ -33,87 +32,92 @@ LOAD ./build/arch/arm64/entry.o
 
 .rodata
  *(.rodata.*)
+                0x0000000080001000                . = ALIGN (0x8)
+                0x0000000080001000                rela_begin = .
 
-.eh_frame       0x0000000080001000       0x28
- .eh_frame      0x0000000080001000       0x28 ./build/core/core.o
-                0x0000000080001028                . = ALIGN (0x8)
-                0x0000000080001028                rela_begin = .
-
-.rela           0x0000000080001028        0x0
+.rela           0x0000000080001000        0x0
  *(.rela.*)
- .rela.iplt     0x0000000080001028        0x0 ./build/arch/arm64/entry.o
+ .rela.iplt     0x0000000080001000        0x0 ./build/kernel/mp_stack.o
  .rela.init.entry
-                0x0000000080001028        0x0 ./build/arch/arm64/entry.o
-                0x0000000080001028                rela_end = .
+                0x0000000080001000        0x0 ./build/kernel/mp_stack.o
+                0x0000000080001000                rela_end = .
 
 .dynsym
  *(.dynsym.*)
 
 .dynstr
  *(.dynstr.*)
-                0x0000000080002000                . = ALIGN (0x1000)
-                0x0000000080002000                data_begin = .
+                0x0000000080001000                . = ALIGN (0x40)
 
-.data           0x0000000080002000        0x0
+.stacks         0x0000000080001000     0x8000
+                0x0000000080001000                __stacks_start__ = .
+ *(_mp_stack)
+ _mp_stack      0x0000000080001000     0x8000 ./build/kernel/mp_stack.o
+                0x0000000080001000                mp_stack
+                0x0000000080009000                __stacks_end__ = .
+                0x0000000080009000                . = ALIGN (0x1000)
+                0x0000000080009000                data_begin = .
+
+.data           0x0000000080009000        0x0
  *(.data)
- .data          0x0000000080002000        0x0 ./build/core/core.o
- .data          0x0000000080002000        0x0 ./build/arch/arm64/entry.o
+ .data          0x0000000080009000        0x0 ./build/kernel/mp_stack.o
+ .data          0x0000000080009000        0x0 ./build/arch/arm64/entry.o
 
-.igot.plt       0x0000000080002000        0x0
- .igot.plt      0x0000000080002000        0x0 ./build/arch/arm64/entry.o
+.igot.plt       0x0000000080009000        0x0
+ .igot.plt      0x0000000080009000        0x0 ./build/kernel/mp_stack.o
 
 .got
  *(.got.*)
 
 .dynamic
  *(.dynamic.*)
-                0x0000000080002000                bin_end = .
-                0x0000000080002000                . = ALIGN (0x10)
-                0x0000000080002000                bss_begin = .
+                0x0000000080009000                bin_end = .
+                0x0000000080009000                . = ALIGN (0x10)
+                0x0000000080009000                bss_begin = .
 
-.bss            0x0000000080002000        0x0
+.bss            0x0000000080009000        0x0
  *(.bss)
- .bss           0x0000000080002000        0x0 ./build/core/core.o
- .bss           0x0000000080002000        0x0 ./build/arch/arm64/entry.o
+ .bss           0x0000000080009000        0x0 ./build/kernel/mp_stack.o
+ .bss           0x0000000080009000        0x0 ./build/arch/arm64/entry.o
  *(COMMON)
-                0x0000000080002000                . = ALIGN (0x10)
-                0x0000000080002000                bss_end = .
+                0x0000000080009000                . = ALIGN (0x10)
+                0x0000000080009000                bss_end = .
                 0x0000000000000000                data_size = ABSOLUTE ((. - data_begin))
-                0x0000000080002000                . = ALIGN (0x1000)
-                0x0000000080002000                data_end = .
+                0x0000000080009000                . = ALIGN (0x1000)
+                0x0000000080009000                data_end = .
 
 /DISCARD/
  *(.gnu.hash)
  *(.hash)
  *(.interp)
-                0x0000000080002000                . = ALIGN (0x1000)
-                0x0000000080002000                image_end = .
-                0x0000000000002000                bin_size = ABSOLUTE ((bin_end - ORIGIN_ADDRESS))
-                0x0000000000002000                image_size = ABSOLUTE ((image_end - ORIGIN_ADDRESS))
+                0x0000000080009000                . = ALIGN (0x1000)
+                0x0000000080009000                image_end = .
+                0x0000000000009000                bin_size = ABSOLUTE ((bin_end - ORIGIN_ADDRESS))
+                0x0000000000009000                image_size = ABSOLUTE ((image_end - ORIGIN_ADDRESS))
                 0x0000000080000000                ORIGIN_ADDRESS = 0x80000000
 OUTPUT(./build/Kopernik.elf elf64-littleaarch64)
 
-.debug_info     0x0000000000000000       0x48
- .debug_info    0x0000000000000000       0x48 ./build/core/core.o
+.debug_info     0x0000000000000000       0x53
+ .debug_info    0x0000000000000000       0x53 ./build/kernel/mp_stack.o
 
-.debug_abbrev   0x0000000000000000       0x2c
- .debug_abbrev  0x0000000000000000       0x2c ./build/core/core.o
+.debug_abbrev   0x0000000000000000       0x40
+ .debug_abbrev  0x0000000000000000       0x40 ./build/kernel/mp_stack.o
 
-.debug_aranges  0x0000000000000000       0x30
+.debug_aranges  0x0000000000000000       0x20
  .debug_aranges
-                0x0000000000000000       0x30 ./build/core/core.o
+                0x0000000000000000       0x20 ./build/kernel/mp_stack.o
 
-.debug_line     0x0000000000000000       0x40
- .debug_line    0x0000000000000000       0x40 ./build/core/core.o
+.debug_line     0x0000000000000000       0x32
+ .debug_line    0x0000000000000000       0x32 ./build/kernel/mp_stack.o
 
-.debug_str      0x0000000000000000       0x88
- .debug_str     0x0000000000000000       0x88 ./build/core/core.o
+.debug_str      0x0000000000000000       0xb1
+ .debug_str     0x0000000000000000       0xb1 ./build/kernel/mp_stack.o
 
 .comment        0x0000000000000000       0x5a
- .comment       0x0000000000000000       0x5a ./build/core/core.o
+ .comment       0x0000000000000000       0x5a ./build/kernel/mp_stack.o
                                          0x5b (size before relaxing)
 
 .note.GNU-stack
                 0x0000000000000000        0x0
  .note.GNU-stack
-                0x0000000000000000        0x0 ./build/core/core.o
+                0x0000000000000000        0x0 ./build/kernel/mp_stack.o

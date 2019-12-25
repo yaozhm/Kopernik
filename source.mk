@@ -4,7 +4,7 @@ INCLUDE_DIR += include \
 	       arch/arm64/include
 
 KERNEL_SRCS += arch/arm64/entry.S \
-	       core/core.c
+	       kernel/mp_stack.c
 
 PLATFORM_SRCS +=
 

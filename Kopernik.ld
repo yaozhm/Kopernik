@@ -59,6 +59,13 @@ SECTIONS
 	.dynstr : {
 		*(.dynstr.*)
 	}
+
+	. = ALIGN(64);
+	.stacks : {
+		__stacks_start__ = .;
+		*(_mp_stack)
+		__stacks_end__ = .;
+    	}
 	/*
 	 * Collect together the read-write data including .bss at the end which
 	 * will be zero'd by the entry code. This is page aligned so it can be
